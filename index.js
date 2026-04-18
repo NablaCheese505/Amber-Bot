@@ -2,11 +2,10 @@ const Discord = require("discord.js")
 const fs = require("fs")
 
 const config = require("./config.json")
-
 const Tools = require("./classes/Tools.js")
 const Model = require("./classes/DatabaseModel.js")
 
-// automatic files: these handle discord status and version number, manage them with the dev commands
+// automatic files: these handle discord status and version number
 const autoPath = "./json/auto/"
 if (!fs.existsSync(autoPath)) fs.mkdirSync(autoPath)
 if (!fs.existsSync(autoPath + "status.json")) fs.copyFileSync("./json/default_status.json", autoPath + "status.json")
@@ -17,39 +16,31 @@ const version = require("./json/auto/version.json")
 
 const startTime = Date.now()
 
-// create client
+// create client (Optimizado para RoleGuard)
 const client = new Discord.Client({
     allowedMentions: { parse: ["users"] },
     makeCache: Discord.Options.cacheWithLimits({
         ...Discord.Options.DefaultMakeCacheSettings, 
-        MessageManager: 10, 
+        MessageManager: 0, 
         PresenceManager: 0, 
         ReactionManager: 0, 
         ThreadMemberManager: 0, 
-        ThreadManager: 10
+        ThreadManager: 0,
+        VoiceStateManager: 0
+        // GuildMemberManager no se limita para mantener la caché activa y proteger oldMember
     }),
     sweepers: {
         ...Discord.Options.DefaultSweeperSettings,
-        messages: { interval: 3600, lifetime: 1800 }, 
-        users: { interval: 3600, filter: () => user => user.id !== client.user.id }
+        messages: { interval: 3600, lifetime: 1800 }
     },
-    intents: ['Guilds', 'GuildMessages', 'DirectMessages', 'GuildVoiceStates'].map(i => Discord.GatewayIntentBits[i]),
-    partials: ['Channel'].map(p => Discord.Partials[p]),
+    intents: ['Guilds', 'GuildMembers'].map(i => Discord.GatewayIntentBits[i]),
     failIfNotExists: false
 })
-
-if (!client.shard) {
-    console.error("No sharding info found!\nMake sure you start the bot from polaris.js, not index.js")
-    return process.exit()
-}
-
-client.shard.id = client.shard.ids[0]
 
 client.globalTools = new Tools(client);
 
 // connect to db
 client.db = new Model("servers", require("./database_schema.js").schema)
-client.userDB = new Model("user_profiles", require("./database_schema.js").userProfileSchema)
 
 // command files
 const dir = "./commands/"
@@ -71,13 +62,13 @@ client.updateStatus = function() {
 
 // when online
 client.on("ready", () => {
-    if (client.shard.id == client.shard.count - 1) console.log(`Bot online! (${+process.uptime().toFixed(2)} secs)`)
+    console.log(`Bot online! (${+process.uptime().toFixed(2)} secs)`)
     client.startupTime = Date.now() - startTime
     client.version = version
 
     client.application.commands.fetch() // cache slash commands
     .then(cmds => {
-        if (cmds.size < 1) { // no commands!! deploy to test server
+        if (cmds.size < 1 && client.commands.has("deploy")) { 
             console.info("!!! No global commands found, deploying dev commands to test server (Use /deploy global=true to deploy global commands)")
             client.commands.get("deploy").run(client, null, client.globalTools)
         }
@@ -85,49 +76,16 @@ client.on("ready", () => {
 
     client.updateStatus()
     setInterval(client.updateStatus, 15 * 60000);
-
-    // run the web server
-    if (client.shard.id == 0 && config.enableWebServer) require("./web_app.js")(client)
 })
 
-// on message
-client.on("messageCreate", async message => {
-    if (message.system || message.author.bot) return
-    else if (!message.guild || !message.member) return // dm stuff
-    else client.commands.get("message").run(client, message, client.globalTools)
-})
-
-// on voice state update
-client.on("voiceStateUpdate", async (oldState, newState) => {
-    if (!oldState.guild || !oldState.member) return; // ignore DM
-    client.commands.get("voice").run(client, oldState, newState, client.globalTools);
+client.on("guildMemberUpdate", async (oldMember, newMember) => {
+    if (newMember.user.bot) return; // Ignoramos a otros bots
+    
 })
 
 // on interaction
 client.on("interactionCreate", async int => {
-    
     if (!int.guild) return int.reply("You can't use commands in DMs!")
-        
-    // for setting changes
-    if (int.isStringSelectMenu()) {
-        if (int.customId.startsWith("configmenu_")) {
-            if (int.customId.split("_")[1] != int.user.id) return int.deferUpdate()
-            let configData = int.values[0].split("_").slice(1)
-            let configCmd = (configData[0] == "dir" ? "button:settings_list" : "button:settings_view")
-            client.commands.get(configCmd).run(client, int, new Tools(client, int), configData)
-        }
-        return;
-    }
-
-    // also for setting changes
-    else if (int.isModalSubmit()) {
-        if (int.customId.startsWith("configmodal")) {
-            let modalData = int.customId.split("~")
-            if (modalData[2] != int.user.id) return int.deferUpdate()
-            client.commands.get("button:settings_edit").run(client, int, new Tools(client, int), modalData[1])
-        }
-        return;
-    }
 
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName)
