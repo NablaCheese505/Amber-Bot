@@ -8,10 +8,17 @@ const Model = require("./classes/DatabaseModel.js")
 const RoleManager = require("./classes/RoleManager.js")
 
 // automatic files: these handle discord status and version number
-const autoPath = "./json/auto/"
-if (!fs.existsSync(autoPath)) fs.mkdirSync(autoPath)
-if (!fs.existsSync(autoPath + "status.json")) fs.copyFileSync("./json/default_status.json", autoPath + "status.json")
-if (!fs.existsSync(autoPath + "version.json")) fs.writeFileSync(autoPath + "version.json", JSON.stringify({ version: "1.0.0", updated: Date.now() }, null, 2))
+const autoPath = "./json/auto/";
+if (!fs.existsSync("./json")) fs.mkdirSync("./json"); // Crea la carpeta padre si no existe
+if (!fs.existsSync(autoPath)) fs.mkdirSync(autoPath);
+
+// En lugar de copiar un archivo que ya no existe, el bot crea su propio estado base directamente
+if (!fs.existsSync(autoPath + "status.json")) {
+    fs.writeFileSync(autoPath + "status.json", JSON.stringify({ type: "Playing", name: "RoleGuard", status: "online" }, null, 2));
+}
+if (!fs.existsSync(autoPath + "version.json")) {
+    fs.writeFileSync(autoPath + "version.json", JSON.stringify({ version: "1.0.0", updated: Date.now() }, null, 2));
+}
 
 const rawStatus = require("./json/auto/status.json")
 const version = require("./json/auto/version.json")
