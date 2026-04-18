@@ -1,38 +1,14 @@
 {
-  "test_server_ids": ["1488341595077214298","1490129236172738630"],
-
+  "test_server_ids": ["1488341595077214298", "1490129236172738630"],
   "developer_ids": ["374004303293317121"],
-
-  "lockBotToDevOnly": false,
-  
-  "enableWebServer": true,
-  "serverPort": 6880,
-  "siteURL": "http://localhost:6880",
-
+  "lockBotToDevOnly": true,
   "defaultLanguage": "es",
-  
-  "changelogURL": "",
-  "supportURL": "",
   "emojis": {
     "success": "<:circlecheck:1490876466995400795>",
     "error": "<:circlex:1490876468710866976>",
-    "edit": "<:pencilline:1490876470980120576>",
-    "refresh": "<:refreshcw:1490876472238411827>",
     "warning": "<:trianglealert:1490876474050482176>",
-    "xp": "<:zap:1490876475820474533>",
-    "next": "<:chevronsright:1490885940267192402>",
-    "clock": "<:clock:1490876470158163998>",
-    "mult": "<:rocket:1490876473274273802>",
-    "max": "<:trophy:1490876475082281040>",
-    "up": "<:chevronsup:1490888219892383795>",
-    "down": "<:chevronsdown:1490888210371317841>",
-    "disable": "<:octagonalert:1490892619495116851>",
     "settings": "<:cog:1490892616613756998>",
-    "online": "<:globe:1490892618203402422>",
-    "export": "<:folderdown:1490892617364537515>",
-    "mic": "<:mic:1491154413690032288>",
-    "back": "<:chevronsleft:1491232923502776380>",
-    "number": "<:hash:1491232925830610945>",
-    "text": "<:filepen:1491232924719255644>"
+    "edit": "<:pencilline:1490876470980120576>",
+    "refresh": "<:refreshcw:1490876472238411827>"
   }
 }

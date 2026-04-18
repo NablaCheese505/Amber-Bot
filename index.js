@@ -40,7 +40,12 @@ const client = new Discord.Client({
 client.globalTools = new Tools(client);
 
 // connect to db
-client.db = new Model("servers", require("./database_schema.js").schema)
+const dbModels = require("./database_schema.js");
+client.db = {
+    settings: dbModels.GuildSettings,
+    honeypots: dbModels.Honeypots,
+    dependencies: dbModels.Dependencies
+};
 
 // command files
 const dir = "./commands/"

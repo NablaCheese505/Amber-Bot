@@ -1,186 +1,28 @@
-const mongoose = require("mongoose")
-const { availableLanguages, DEFAULT_LANG } = require("./utils/i18n.js") // <-- AÑADE ESTA LÍNEA
+const mongoose = require("mongoose");
+const { DEFAULT_LANG } = require("./utils/i18n.js");
 
-// Most of the properties below are used for the web server, they are not built into the mongo schema
-
-// type:        the value's data type (bool, int, float, string, collection)
-// default:     the default value
-// min+max:     for numbers, forces between those values
-// precision:   for floats, how many decimal places
-// maxlength:   for strings, max length
-// accept:      for strings, accepted values. discord:channel and discord:role accept any of those kind of ids
-
-const settings = {
-    enabled: { type: "bool", default: false },
-    lang: { type: "string", default: DEFAULT_LANG, accept: availableLanguages },
-    enabledVoiceXp: { type: "bool", default: false },
-    gain: {
-        min: { type: "int", default: 50, min: 0, max: 5000 },
-        max: { type: "int", default: 100, min: 0, max: 5000 },
-        time: { type: "float", precision: 4, default: 60, min: 0, max: 31536000 },
-    },
-    voice: { 
-        multiplier: { type: "float", precision: 2, default: 1, min: 0, max: 10 }, 
-        hoursLimit: { type: "float", precision: 2, default: 0, min: 0, max: 24 }, 
-    },
-    curve: {
-        3: { type: "float", precision: 10, default: 1, min: 0, max: 100 },
-        2: { type: "float", precision: 10, default: 50, min: 0, max: 10000 },
-        1: { type: "float", precision: 10, default: 100, min: 0, max: 100000 },
-    },
-    rounding: { type: "int", default: 100, min: 1, max: 1000  },
-    maxLevel: { type: "int", default: 1000, min: 1, max: 1000  },
-
-    levelUp: {
-        enabled: { type: "bool", default: false },
-        embed: { type: "bool", default: false },
-        rewardRolesOnly: { type: "bool", default: false },
-        message: { type: "string", maxlength: 6000, default: "" },
-        channel: { type: "string", default: "current", accept: ["dm", "current", "discord:channel"] },
-        multiple: { type: "int", default: 1, min: 1, max: 1000 },
-        multipleUntil: { type: "int", default: 20, min: 0, max: 1000 }
-    },
-
-    multipliers: {
-        roles: { type: "collection", values: {
-            id: { type: "string", accept: ["discord:role"] },
-            boost: { type: "float", min: 0, max: 100, precision: 4 },
-        }},
-        rolePriority: { type: "string", default: "largest", accept: ["largest", "smallest", "highest", "add", "combine"] },
-        channels: { type: "collection", values: {
-            id: { type: "string", accept: ["discord:channel"] },
-            boost: { type: "float", min: 0, max: 100, precision: 4 },
-        }},
-        channelStacking: { type: "string", default: "multiply", accept: ["multiply", "add", "largest", "channel", "role"] }
-    },
-
-    rewards: { type: "collection", values: {
-        id: { type: "string", accept: ["discord:role"] },
-        level: { type: "int", min: 1, max: 1000 },
-        keep: { type: "bool" },
-        noSync: { type: "bool" },
-    }},
-
-    rewardSyncing: {
-        sync: { type: "string", default: "level", accept: ["level", "xp", "never"] },
-        noManual: { type: "bool", default: false },
-        noWarning: { type: "bool", default: false }
-    },
-
-    leaderboard: {
-        disabled: { type: "bool", default: false },
-        private: { type: "bool", default: false },
-        hideRoles: { type: "bool", default: false },
-        maxEntries: { type: "int", default: 0, min: 0, max: 1000000 },
-        minLevel: { type: "int", default: 0, min: 0, max: 1000 },
-        ephemeral: { type: "bool", default: false },
-        embedColor: { type: "int", default: -1, min: -1, max: 0xffffff }
-    },
-
-    rankCard: {
-        disabled: { type: "bool", default: false },
-        useImageCard: { type: "bool", default: false },
-        relativeLevel: { type: "bool", default: false },
-        hideCooldown: { type: "bool", default: false },
-        ephemeral: { type: "bool", default: false },
-        embedColor: { type: "int", default: -1, min: -1, max: 0xffffff },
-        backgroundURL: { type: "string", maxlength: 500, default: "" }, 
-        backgroundFit: { type: "string", default: "cover", accept: ["cover", "contain", "stretch"] },
-        backgroundURL: { type: "string", maxlength: 500, default: "" }, 
-        backgroundFit: { type: "string", default: "cover", accept: ["cover", "contain", "stretch"] },
-        backgroundColor: { type: "string", maxlength: 7, default: "#1e1f22" }, 
-        overlayColor: { type: "string", maxlength: 7, default: "#000000" }, 
-        opacity: { type: "float", precision: 2, default: 0.8, min: 0.0, max: 1.0 }, 
-        barColor: { type: "string", maxlength: 7, default: "#FFA500" }, 
-        textColor: { type: "string", maxlength: 7, default: "#FFFFFF" },
-        avatarShape: { type: "string", default: "circle", accept: ["circle", "square"] },
-        avatarBorderColor: { type: "string", maxlength: 7, default: "none" },
-        allowUserCards: { type: "bool", default: false },
-        requiredRole: { type: "string", default: "none", accept: ["none", "discord:role"] },
-        requiredLevel: { type: "int", default: 0, min: 0, max: 1000 }
-    },
-
-    hideMultipliers: { type: "bool", default: false },
-    manualPerms: { type: "bool", default: false }
-}
-
-const settingsArray = []
-const settingsObj = {}
-const settingsIDs = {}
-
-const schemaTypes = {
-    "bool": Boolean,
-    "int": Number,
-    "float": Number,
-    "string": String,
-    "collection": [Object]
-}
-
-function schemaVal(val) {
-    let result = { type: schemaTypes[val.type] }
-    if (val.type == "collection") result.default = []
-    else if (val.default !== undefined) result.default = val.default
-    return result
-}
-
-function addToSettingsArray(value, name) {
-    let obj = value
-    obj.db = name
-    settingsArray.push(obj)
-    settingsIDs[name] = obj
-}
-
-// for settings, create the actual mongo schema
-Object.entries(settings).forEach(x => {
-    let [key, val] = x
-    if (!val.type) {
-        let collection = {}
-        Object.entries(val).forEach(z => {
-            let [innerKey, innerVal] = z
-            collection[innerKey] = schemaVal(innerVal)
-            addToSettingsArray(innerVal, `${key}.${innerKey}`)
-        })
-        settingsObj[key] = collection
-    }
-    else {
-        addToSettingsArray(val, key)
-        settingsObj[key] = schemaVal(val)
-    }
-})
-
-const schema = { 
+const guildSettingsSchema = new mongoose.Schema({
     _id: String,
-    users: { type: Object }, // xp, cooldown, hidden. should be validated but it just slows things down
-    settings: settingsObj,
-    info: {
-        lastUpdate: { type: Number, default: 0 },
-    }
-}
+    lang: { type: String, default: DEFAULT_LANG },
+    logChannelId: { type: String, default: null },
+    active: { type: Boolean, default: true }
+});
 
-const finalSchema = new mongoose.Schema(schema)
+const honeypotSchema = new mongoose.Schema({
+    guildId: { type: String, required: true },
+    roleId: { type: String, required: true },
+    action: { type: String, enum: ['kick', 'ban', 'quarantine'], default: 'kick' },
+    reason: { type: String, default: 'Activó un rol trampa (Honeypot).' }
+});
 
-const userProfileSchema = new mongoose.Schema({
-    _id: String, // ID de Discord del usuario
-    rankCard: {
-        backgroundURL: { type: String, maxlength: 500, default: "" },
-        backgroundFit: { type: String, default: "cover" },
-        backgroundColor: { type: String, maxlength: 7, default: "#1e1f22" },
-        overlayColor: { type: String, maxlength: 7, default: "#000000" },
-        opacity: { type: Number, default: 0.8, min: 0.0, max: 1.0 },
-        barColor: { type: String, maxlength: 7, default: "#FFA500" },
-        textColor: { type: String, maxlength: 7, default: "#FFFFFF" },
-        avatarShape: { type: String, default: "circle" },
-        avatarBorderColor: { type: String, maxlength: 7, default: "none" }
-    },
-    info: {
-        lastUpdate: { type: Number, default: 0 }
-    }
-})
+const dependencySchema = new mongoose.Schema({
+    guildId: { type: String, required: true },
+    parentRoleId: { type: String, required: true },
+    dependentRoles: [{ type: String }]
+});
 
 module.exports = {
-    settings, 
-    settingsArray, 
-    settingsIDs, 
-    schema: finalSchema,
-    userProfileSchema: userProfileSchema
-}
+    GuildSettings: mongoose.model('GuildSettings', guildSettingsSchema),
+    Honeypots: mongoose.model('Honeypot', honeypotSchema),
+    Dependencies: mongoose.model('Dependency', dependencySchema)
+};
