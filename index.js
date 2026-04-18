@@ -4,6 +4,7 @@ const fs = require("fs")
 const config = require("./config.json")
 const Tools = require("./classes/Tools.js")
 const Model = require("./classes/DatabaseModel.js")
+const RoleManager = require("./classes/RoleManager.js")
 
 // automatic files: these handle discord status and version number
 const autoPath = "./json/auto/"
@@ -16,7 +17,7 @@ const version = require("./json/auto/version.json")
 
 const startTime = Date.now()
 
-// create client (Optimizado para RoleGuard)
+// create client
 const client = new Discord.Client({
     allowedMentions: { parse: ["users"] },
     makeCache: Discord.Options.cacheWithLimits({
@@ -27,7 +28,6 @@ const client = new Discord.Client({
         ThreadMemberManager: 0, 
         ThreadManager: 0,
         VoiceStateManager: 0
-        // GuildMemberManager no se limita para mantener la caché activa y proteger oldMember
     }),
     sweepers: {
         ...Discord.Options.DefaultSweeperSettings,
@@ -46,6 +46,8 @@ client.db = {
     honeypots: dbModels.Honeypots,
     dependencies: dbModels.Dependencies
 };
+
+client.roleManager = new RoleManager(client);
 
 // command files
 const dir = "./commands/"
@@ -85,7 +87,7 @@ client.on("ready", () => {
 
 client.on("guildMemberUpdate", async (oldMember, newMember) => {
     if (newMember.user.bot) return; // Ignoramos a otros bots
-    
+    client.roleManager.handleUpdate(oldMember, newMember);    
 })
 
 // on interaction
