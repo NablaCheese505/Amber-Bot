@@ -121,3 +121,6 @@ Amber uses modern Slash Commands. Most commands require **Administrator** permis
 
 **Amber Bot** was developed by Nabla (NablaCheese505).
 Feel free to fork, modify, and host this bot for your own communities. Pull requests for bug fixes and code improvements are always welcome!
+
+## Author
+**Martin Farid Carrasco Gómez** Mechatronics Engineering Student
